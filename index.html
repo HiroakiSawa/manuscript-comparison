@@ -5,7 +5,497 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>写本異読確認ツール - 6写本対応</title>
-    <link rel="stylesheet" href="stylesheet.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans Arabic', 'Amiri', 'Arial Unicode MS', 'Tahoma', 'Segoe UI', sans-serif;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            height: 100vh;
+            overflow: hidden;
+            -webkit-font-feature-settings: "liga" 1, "kern" 1;
+            font-feature-settings: "liga" 1, "kern" 1;
+            text-rendering: optimizeLegibility;
+        }
+
+        .header {
+            background: #2d2d30;
+            padding: 8px 16px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .header h1 {
+            font-size: 14px;
+            font-weight: normal;
+            margin-right: auto;
+        }
+
+        .load-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .load-btn {
+            padding: 4px 12px;
+            background: #0e639c;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .load-btn:hover {
+            background: #1177bb;
+        }
+
+        .manuscript-selector {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .manuscript-count-control {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #d4d4d4;
+        }
+
+        .count-select {
+            padding: 2px 6px;
+            background: #2d2d30;
+            color: #d4d4d4;
+            border: 1px solid #3e3e42;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        .manuscript-count {
+            font-size: 11px;
+            color: #858585;
+        }
+
+        .container {
+            display: grid;
+            height: calc(100vh - 50px);
+            gap: 1px;
+            background: #3e3e42;
+            /* グリッド設定は JavaScript で動的に変更される */
+        }
+
+        .results-panel {
+            grid-column: -2;
+            grid-row: 1 / -1;
+            background: #252526;
+            border-left: 2px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .panel-header {
+            background: #252526;
+            padding: 6px 12px;
+            border-bottom: 1px solid #3e3e42;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #d4d4d4;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 2px 4px;
+            border-radius: 2px;
+            min-width: 60px;
+        }
+
+        .panel-title:focus {
+            background: #1e1e1e;
+            outline: 1px solid #0e639c;
+        }
+
+        .panel-title:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .panel-controls {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .panel-btn {
+            padding: 2px 6px;
+            background: #0e639c;
+            color: white;
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .panel-btn:hover {
+            background: #1177bb;
+        }
+
+        .panel-btn.danger {
+            background: #d73a49;
+        }
+
+        .panel-btn.danger:hover {
+            background: #e85662;
+        }
+
+        .content {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+        }
+
+        .text-overlay {
+            position: absolute;
+            left: 30px;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            font-family: 'Noto Sans Arabic', 'Amiri', 'Arial Unicode MS', 'Tahoma', sans-serif;
+            font-size: 12px;
+            line-height: 20px;
+            padding: 4px;
+            direction: rtl;
+            text-align: right;
+            unicode-bidi: embed;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            overflow: hidden;
+        }
+
+        .text-overlay .line {
+            display: block;
+        }
+
+        .text-overlay .variant-highlight {
+            background-color: rgba(255, 191, 0, 0.3);
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+
+        .text-overlay .unique-highlight {
+            background-color: rgba(248, 81, 73, 0.3);
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+
+        .text-overlay .common-highlight {
+            background-color: rgba(46, 160, 67, 0.3);
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+
+        .line-numbers {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 30px;
+            background: #1e1e1e;
+            border-right: 1px solid #3e3e42;
+            font-size: 10px;
+            line-height: 20px;
+            padding: 4px 2px;
+            color: #858585;
+            user-select: none;
+            direction: ltr;
+            text-align: right;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .textarea-input {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border: none;
+            color: #d4d4d4;
+            font-family: 'Noto Sans Arabic', 'Amiri', 'Arial Unicode MS', 'Tahoma', sans-serif;
+            font-size: 12px;
+            line-height: 20px;
+            padding: 4px;
+            margin-left: 30px;
+            resize: none;
+            outline: none;
+            direction: rtl;
+            text-align: right;
+            unicode-bidi: embed;
+            word-wrap: break-word;
+            -webkit-font-feature-settings: "liga" 1, "kern" 1, "calt" 1;
+            font-feature-settings: "liga" 1, "kern" 1, "calt" 1;
+            text-rendering: optimizeLegibility;
+            /* スクロールバーの初期位置を右端に */
+            scroll-behavior: smooth;
+        }
+
+        .status {
+            font-size: 9px;
+            color: #858585;
+        }
+
+        .results-header {
+            background: #252526;
+            padding: 8px 12px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .results-title {
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .results-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .results-btn {
+            padding: 4px 8px;
+            background: #0e639c;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .results-btn:hover {
+            background: #1177bb;
+        }
+
+        .legend {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            font-size: 9px;
+            color: #d4d4d4;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        .legend-color.variant {
+            background-color: rgba(255, 191, 0, 0.4);
+            border: 1px solid #ffbf00;
+        }
+
+        .legend-color.unique {
+            background-color: rgba(248, 81, 73, 0.4);
+            border: 1px solid #f85149;
+        }
+
+        .legend-color.common {
+            background-color: rgba(46, 160, 67, 0.4);
+            border: 1px solid #4ec9b0;
+        }
+
+        .legend-color.same {
+            background-color: transparent;
+            border: 1px solid #858585;
+        }
+
+        .results-content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 8px;
+            font-size: 11px;
+            line-height: 16px;
+            white-space: pre-wrap;
+            direction: rtl;
+            text-align: right;
+            font-family: 'Noto Sans Arabic', 'Amiri', 'Arial Unicode MS', 'Tahoma', sans-serif;
+            /* スクロールバーのスタイリング */
+            scrollbar-width: thin;
+            scrollbar-color: #0e639c #2d2d30;
+        }
+
+        .results-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .results-content::-webkit-scrollbar-track {
+            background: #2d2d30;
+            border-radius: 4px;
+        }
+
+        .results-content::-webkit-scrollbar-thumb {
+            background: #0e639c;
+            border-radius: 4px;
+        }
+
+        .results-content::-webkit-scrollbar-thumb:hover {
+            background: #1177bb;
+        }
+
+        .variant-line {
+            margin-bottom: 8px;
+            padding: 4px;
+            border-radius: 3px;
+        }
+
+        .variant-line.highlight {
+            background: rgba(255, 191, 0, 0.1);
+            border-left: 3px solid #ffbf00;
+        }
+
+        .manuscript-label {
+            font-weight: bold;
+            color: #4ec9b0;
+            font-size: 10px;
+        }
+
+        .variant-text {
+            color: #ffbf00;
+            background: rgba(255, 191, 0, 0.1);
+            padding: 1px 3px;
+            border-radius: 2px;
+        }
+
+        /* ダイアログスタイル */
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .dialog {
+            background: #2d2d30;
+            border: 1px solid #3e3e42;
+            border-radius: 6px;
+            padding: 20px;
+            width: 600px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow: auto;
+        }
+
+        .dialog h3 {
+            margin: 0 0 15px 0;
+            color: #d4d4d4;
+            font-size: 16px;
+        }
+
+        .dialog-input {
+            width: 100%;
+            height: 200px;
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            color: #d4d4d4;
+            font-family: 'Noto Sans Arabic', 'Amiri', 'Arial Unicode MS', 'Tahoma', sans-serif;
+            font-size: 14px;
+            line-height: 20px;
+            padding: 10px;
+            resize: vertical;
+            direction: rtl;
+            text-align: right;
+            unicode-bidi: embed;
+        }
+
+        .dialog-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 15px;
+        }
+
+        .dialog-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .dialog-btn.primary {
+            background: #0e639c;
+            color: white;
+        }
+
+        .dialog-btn.primary:hover {
+            background: #1177bb;
+        }
+
+        .dialog-btn.secondary {
+            background: #3e3e42;
+            color: #d4d4d4;
+        }
+
+        .dialog-btn.secondary:hover {
+            background: #4e4e52;
+        }
+
+        .target-selector {
+            margin: 10px 0;
+        }
+
+        .target-selector label {
+            display: inline-block;
+            margin-right: 15px;
+            color: #d4d4d4;
+            font-size: 14px;
+        }
+
+        .target-selector input[type="radio"] {
+            margin-right: 5px;
+        }
+    </style>
 </head>
 <body>
     <div class="header">
@@ -100,6 +590,81 @@
         let manuscriptPanels = [1, 2, 3, 4, 5, 6]; // アクティブなパネルIDを管理
         let nextPanelId = 7; // 次に作成するパネルID
 
+        function syncOverlayScroll(panelId) {
+            const textarea = document.getElementById(`text${panelId}`);
+            const overlay = document.getElementById(`textOverlay${panelId}`);
+            if (textarea && overlay) {
+                overlay.scrollTop = textarea.scrollTop;
+                overlay.scrollLeft = textarea.scrollLeft;
+            }
+        }
+
+        function updateTextOverlays(analysis) {
+            // 各写本パネルのオーバーレイを更新
+            manuscriptPanels.forEach((panelId, index) => {
+                const textarea = document.getElementById(`text${panelId}`);
+                const overlay = document.getElementById(`textOverlay${panelId}`);
+                
+                if (!textarea || !overlay) return;
+                
+                const lines = textarea.value.split('\n');
+                let overlayHTML = '';
+                
+                lines.forEach((line, lineIndex) => {
+                    const lineNum = lineIndex + 1;
+                    const analysisItem = analysis.find(item => item.lineNumber === lineNum);
+                    
+                    if (analysisItem) {
+                        // この行に異読がある
+                        const currentVariant = analysisItem.variants[index] || '';
+                        const variantType = getVariantType(analysisItem, index);
+                        
+                        if (currentVariant.trim()) {
+                            overlayHTML += `<span class="line"><span class="${variantType}-highlight">${escapeHtml(line)}</span></span>\n`;
+                        } else {
+                            overlayHTML += `<span class="line">${escapeHtml(line)}</span>\n`;
+                        }
+                    } else {
+                        // 通常の行（異読なし）
+                        overlayHTML += `<span class="line">${escapeHtml(line)}</span>\n`;
+                    }
+                });
+                
+                overlay.innerHTML = overlayHTML;
+                syncOverlayScroll(panelId);
+            });
+        }
+
+        function getVariantType(analysisItem, manuscriptIndex) {
+            const variants = new Map();
+            const currentText = analysisItem.variants[manuscriptIndex] || '';
+            
+            // 同じテキストを持つ写本をグループ化
+            for (let i = 0; i < analysisItem.variants.length; i++) {
+                const text = analysisItem.variants[i] || '';
+                if (!variants.has(text)) {
+                    variants.set(text, []);
+                }
+                variants.get(text).push(i);
+            }
+            
+            const currentGroup = variants.get(currentText);
+            
+            if (currentGroup && currentGroup.length === 1) {
+                return 'unique'; // この写本だけが持つ独自の読み
+            } else if (currentGroup && currentGroup.length > 1 && currentGroup.length < analysisItem.variants.length) {
+                return 'common'; // 複数の写本で共通だが全部ではない
+            } else {
+                return 'variant'; // その他の異読
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         function addManuscriptPanel() {
             if (manuscriptPanels.length >= 12) {
                 alert('最大12写本まで対応しています');
@@ -193,63 +758,47 @@
             select.value = closestOption;
         }
 
-function updateGridLayoutDynamic() {
-    const container = document.getElementById('manuscriptContainer');
-    const count = manuscriptPanels.length;
-    
-    // 解析結果パネルは常に固定位置に配置
-    const resultsPanel = container.querySelector('.results-panel');
-    if (resultsPanel) {
-        resultsPanel.style.gridColumn = '-2';
-        resultsPanel.style.gridRow = '1 / -1';
-    }
-    
-    if (count === 2) {
-        // 2写本: 横並び、1行で最大化
-        container.style.gridTemplateColumns = '1fr 1fr 400px';
-        container.style.gridTemplateRows = '1fr';
-    } else if (count === 3) {
-        // 3写本: 横並び、1行で最大化
-        container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
-        container.style.gridTemplateRows = '1fr';
-    } else if (count === 4) {
-        // 4写本: 2×2配置
-        container.style.gridTemplateColumns = '1fr 1fr 400px';
-        container.style.gridTemplateRows = '1fr 1fr';
-    } else if (count === 5) {
-        // 5写本: 3+2配置
-        container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
-        container.style.gridTemplateRows = '1fr 1fr';
-    } else if (count === 6) {
-        // 6写本: 3×2配置
-        container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
-        container.style.gridTemplateRows = '1fr 1fr';
-    } else if (count <= 8) {
-        // 7-8写本: 4×2配置
-        container.style.gridTemplateColumns = '1fr 1fr 1fr 1fr 400px';
-        container.style.gridTemplateRows = '1fr 1fr';
-    } else if (count === 9) {
-        // 9写本: 3×3配置
-        container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
-        container.style.gridTemplateRows = '1fr 1fr 1fr';
-    } else {
-        // 10-12写本: 4×3配置
-        container.style.gridTemplateColumns = '1fr 1fr 1fr 1fr 400px';
-        container.style.gridTemplateRows = '1fr 1fr 1fr';
-    }
-    
-    // 追加ボタンの表示/非表示
-    updateAddButton();
-    
-    // 解析結果パネルの高さを確実に設定
-    setTimeout(() => {
-        const resultsPanel = document.getElementById('manuscriptContainer').querySelector('.results-panel');
-        if (resultsPanel) {
-            resultsPanel.style.height = 'auto';
-            resultsPanel.style.minHeight = '100%';
+        function updateGridLayoutDynamic() {
+            const container = document.getElementById('manuscriptContainer');
+            const count = manuscriptPanels.length;
+            
+            if (count === 2) {
+                // 2写本: 横並び、1行で最大化
+                container.style.gridTemplateColumns = '1fr 1fr 400px';
+                container.style.gridTemplateRows = '1fr';
+            } else if (count === 3) {
+                // 3写本: 横並び、1行で最大化
+                container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
+                container.style.gridTemplateRows = '1fr';
+            } else if (count === 4) {
+                // 4写本: 2×2配置
+                container.style.gridTemplateColumns = '1fr 1fr 400px';
+                container.style.gridTemplateRows = '1fr 1fr';
+            } else if (count === 5) {
+                // 5写本: 3+2配置
+                container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
+                container.style.gridTemplateRows = '1fr 1fr';
+            } else if (count === 6) {
+                // 6写本: 3×2配置
+                container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
+                container.style.gridTemplateRows = '1fr 1fr';
+            } else if (count <= 8) {
+                // 7-8写本: 4×2配置
+                container.style.gridTemplateColumns = '1fr 1fr 1fr 1fr 400px';
+                container.style.gridTemplateRows = '1fr 1fr';
+            } else if (count === 9) {
+                // 9写本: 3×3配置
+                container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
+                container.style.gridTemplateRows = '1fr 1fr 1fr';
+            } else {
+                // 10-12写本: 4×3配置
+                container.style.gridTemplateColumns = '1fr 1fr 1fr 1fr 400px';
+                container.style.gridTemplateRows = '1fr 1fr 1fr';
+            }
+            
+            // 追加ボタンの表示/非表示
+            updateAddButton();
         }
-    }, 0);
-}
 
         function updateAddButton() {
             const container = document.getElementById('manuscriptContainer');
@@ -331,9 +880,11 @@ function updateGridLayoutDynamic() {
                     </div>
                     <div class="content">
                         <div class="line-numbers" id="lineNumbers${panelId}"></div>
+                        <div class="text-overlay" id="textOverlay${panelId}"></div>
                         <textarea class="textarea-input" id="text${panelId}" 
                                   placeholder="${manuscriptNames[i-1]}のテキスト..." 
-                                  oninput="updateDiff(); updateStatus(${panelId})"></textarea>
+                                  oninput="updateDiff(); updateStatus(${panelId})"
+                                  onscroll="syncOverlayScroll(${panelId})"></textarea>
                     </div>
                     <div class="status" id="status${panelId}">テキストを入力</div>
                 `;
@@ -346,11 +897,17 @@ function updateGridLayoutDynamic() {
                     updateStatus(panelId);
                 });
                 
+                // スクロール同期のイベントリスナー
+                document.getElementById(`text${panelId}`).addEventListener('scroll', function() {
+                    syncOverlayScroll(panelId);
+                });
+                
                 // RTL用の初期スクロール位置を設定
                 setTimeout(() => {
                     const textarea = document.getElementById(`text${panelId}`);
                     if (textarea) {
                         textarea.scrollLeft = textarea.scrollWidth - textarea.clientWidth;
+                        syncOverlayScroll(panelId);
                     }
                 }, 0);
                 
@@ -430,6 +987,7 @@ function updateGridLayoutDynamic() {
                     // RTL用のスクロール位置を設定
                     setTimeout(() => {
                         textarea.scrollLeft = textarea.scrollWidth - textarea.clientWidth;
+                        syncOverlayScroll(panelNumber);
                     }, 0);
                     
                     updateDiff();
@@ -560,272 +1118,79 @@ function updateGridLayoutDynamic() {
             
             const analysis = analyzeManuscripts(texts);
             displayResults(analysis);
+            updateTextOverlays(analysis);
         }
 
         function analyzeManuscripts(manuscripts) {
-    // 全ての写本のテキストを結合して単語リストを作成
-    const allWords = new Set();
-    const manuscriptWords = manuscripts.map(ms => {
-        const fullText = ms.join(' ').trim();
-        const words = fullText ? fullText.split(/\s+/) : [];
-        words.forEach(word => allWords.add(word));
-        return words;
-    });
-    
-    const results = [];
-    const processedPositions = new Set();
-    
-    // 各単語について異読を確認
-    Array.from(allWords).forEach(word => {
-        if (!word.trim()) return;
-        
-        const wordVariants = new Map();
-        const wordPositions = [];
-        
-        // 各写本でこの単語の位置と前後の文脈を確認
-        manuscriptWords.forEach((words, msIndex) => {
-            words.forEach((w, wordIndex) => {
-                if (w === word) {
-                    // 前後2単語の文脈を含める
-                    const contextStart = Math.max(0, wordIndex - 2);
-                    const contextEnd = Math.min(words.length, wordIndex + 3);
-                    const context = words.slice(contextStart, contextEnd).join(' ');
-                    
-                    const position = `${msIndex}-${wordIndex}`;
-                    if (!processedPositions.has(position)) {
-                        wordPositions.push({
-                            manuscript: msIndex,
-                            wordIndex: wordIndex,
-                            context: context,
-                            position: position
-                        });
-                    }
-                }
-            });
-        });
-        
-        // 文脈が異なる場合のみ異読として記録
-        if (wordPositions.length > 1) {
-            const contextGroups = new Map();
-            wordPositions.forEach(pos => {
-                if (!contextGroups.has(pos.context)) {
-                    contextGroups.set(pos.context, []);
-                }
-                contextGroups.get(pos.context).push(pos.manuscript);
-                processedPositions.add(pos.position);
-            });
+            const maxLines = Math.max(...manuscripts.map(m => m.length));
+            const results = [];
             
-            if (contextGroups.size > 1) {
-                results.push({
-                    word: word,
-                    variants: Array.from(contextGroups.entries()).map(([context, manuscripts]) => ({
-                        context: context,
-                        manuscripts: manuscripts
-                    })),
-                    variantCount: contextGroups.size,
-                    hasVariants: true
-                });
+            for (let lineNum = 0; lineNum < maxLines; lineNum++) {
+                const lineVariants = [];
+                const variants = new Set();
+                
+                for (let i = 0; i < manuscriptPanels.length; i++) {
+                    const line = manuscripts[i][lineNum] || '';
+                    lineVariants.push(line);
+                    if (line.trim()) variants.add(line.trim());
+                }
+                
+                if (variants.size > 1) {
+                    results.push({
+                        lineNumber: lineNum + 1,
+                        variants: lineVariants,
+                        variantCount: variants.size,
+                        hasVariants: true
+                    });
+                }
             }
+            
+            return results;
         }
-    });
-    
-    // 完全に異なるフレーズも検出
-    const phraseResults = analyzePhrases(manuscripts);
-    results.push(...phraseResults);
-    
-    return results.sort((a, b) => {
-        // 単語の出現順でソート
-        const aFirstPos = getFirstWordPosition(a.word || a.phrase, manuscriptWords);
-        const bFirstPos = getFirstWordPosition(b.word || b.phrase, manuscriptWords);
-        return aFirstPos - bFirstPos;
-    });
-}
 
-function analyzeManuscripts(manuscripts) {
-    // 全ての写本のテキストを結合して単語リストを作成
-    const allWords = new Set();
-    const manuscriptWords = manuscripts.map(ms => {
-        const fullText = ms.join(' ').trim();
-        const words = fullText ? fullText.split(/\s+/) : [];
-        words.forEach(word => allWords.add(word));
-        return words;
-    });
-    
-    const results = [];
-    const processedPositions = new Set();
-    
-    // 各単語について異読を確認
-    Array.from(allWords).forEach(word => {
-        if (!word.trim()) return;
-        
-        const wordVariants = new Map();
-        const wordPositions = [];
-        
-        // 各写本でこの単語の位置と前後の文脈を確認
-        manuscriptWords.forEach((words, msIndex) => {
-            words.forEach((w, wordIndex) => {
-                if (w === word) {
-                    // 前後2単語の文脈を含める
-                    const contextStart = Math.max(0, wordIndex - 2);
-                    const contextEnd = Math.min(words.length, wordIndex + 3);
-                    const context = words.slice(contextStart, contextEnd).join(' ');
-                    
-                    const position = `${msIndex}-${wordIndex}`;
-                    if (!processedPositions.has(position)) {
-                        wordPositions.push({
-                            manuscript: msIndex,
-                            wordIndex: wordIndex,
-                            context: context,
-                            position: position
-                        });
-                    }
-                }
-            });
-        });
-        
-        // 文脈が異なる場合のみ異読として記録
-        if (wordPositions.length > 1) {
-            const contextGroups = new Map();
-            wordPositions.forEach(pos => {
-                if (!contextGroups.has(pos.context)) {
-                    contextGroups.set(pos.context, []);
-                }
-                contextGroups.get(pos.context).push(pos.manuscript);
-                processedPositions.add(pos.position);
-            });
+        function displayResults(analysis) {
+            const resultsContent = document.getElementById('resultsContent');
             
-            if (contextGroups.size > 1) {
-                results.push({
-                    word: word,
-                    variants: Array.from(contextGroups.entries()).map(([context, manuscripts]) => ({
-                        context: context,
-                        manuscripts: manuscripts
-                    })),
-                    variantCount: contextGroups.size,
-                    hasVariants: true
+            if (analysis.length === 0) {
+                resultsContent.textContent = '異読箇所は見つかりませんでした\n\n全ての写本が一致しています。';
+                return;
+            }
+            
+            let resultText = `📊 解析サマリー\n異読箇所: ${analysis.length}箇所\n\n`;
+            
+            analysis.forEach((item, index) => {
+                resultText += `━━━━━━━━━━━━━━━━\n`;
+                resultText += `🔍 行 ${item.lineNumber} (異読${item.variantCount}種)\n\n`;
+                
+                const manuscriptLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
+                const variants = new Map();
+                
+                // 同じ異読をグループ化
+                for (let i = 0; i < manuscriptPanels.length; i++) {
+                    const text = item.variants[i] || '[空行]';
+                    if (!variants.has(text)) {
+                        variants.set(text, []);
+                    }
+                    const panelId = manuscriptPanels[i];
+                    const panelTitle = document.getElementById(`panel${panelId}`)?.querySelector('.panel-title')?.value || `写本${i + 1}`;
+                    variants.get(text).push(panelTitle);
+                }
+                
+                let variantNum = 1;
+                variants.forEach((manuscripts, text) => {
+                    if (text.trim() && text !== '[空行]') {
+                        resultText += `📝 異読${variantNum}: ${manuscripts.join('・')}\n`;
+                        resultText += `   ${text}\n\n`;
+                        variantNum++;
+                    } else if (text === '[空行]') {
+                        resultText += `⭕ 空行: ${manuscripts.join('・')}\n\n`;
+                    }
                 });
-            }
-        }
-    });
-    
-    // 完全に異なるフレーズも検出
-    const phraseResults = analyzePhrases(manuscripts);
-    results.push(...phraseResults);
-    
-    return results.sort((a, b) => {
-        // 単語の出現順でソート
-        const aFirstPos = getFirstWordPosition(a.word || a.phrase, manuscriptWords);
-        const bFirstPos = getFirstWordPosition(b.word || b.phrase, manuscriptWords);
-        return aFirstPos - bFirstPos;
-    });
-}
-        
-function displayResults(analysis) {
-    const resultsContent = document.getElementById('resultsContent');
-    
-    if (analysis.length === 0) {
-        resultsContent.textContent = '異読箇所は見つかりませんでした\n\n全ての写本が一致しています。';
-        return;
-    }
-    
-    let resultText = `📊 テキスト解析サマリー\n異読箇所: ${analysis.length}箇所\n\n`;
-    
-    analysis.forEach((item, index) => {
-        resultText += `━━━━━━━━━━━━━━━━\n`;
-        
-        if (item.word) {
-            resultText += `🔍 単語異読: "${item.word}" (${item.variantCount}種)\n\n`;
-        } else if (item.phrase) {
-            resultText += `🔍 句異読: "${item.phrase}" (${item.variantCount}種)\n\n`;
-        }
-        
-        let variantNum = 1;
-        item.variants.forEach(variant => {
-            const manuscriptLabels = variant.manuscripts.map(msIndex => {
-                const panelId = manuscriptPanels[msIndex];
-                return document.getElementById(`panel${panelId}`)?.querySelector('.panel-title')?.value || `写本${msIndex + 1}`;
             });
             
-            resultText += `📝 異読${variantNum}: ${manuscriptLabels.join('・')}\n`;
-            resultText += `   「${variant.context}」\n\n`;
-            variantNum++;
-        });
-    });
-    
-    resultsContent.textContent = resultText;
-}
-function updateTextOverlays(analysis) {
-    // 各写本パネルのオーバーレイを更新
-    manuscriptPanels.forEach((panelId, index) => {
-        const textarea = document.getElementById(`text${panelId}`);
-        const overlay = document.getElementById(`textOverlay${panelId}`);
-        
-        if (!textarea || !overlay) return;
-        
-        const fullText = textarea.value;
-        const words = fullText.split(/(\s+)/); // 空白も保持して分割
-        let overlayHTML = '';
-        
-        // 各単語について異読チェック
-        let wordIndex = 0;
-        words.forEach((token, tokenIndex) => {
-            if (token.match(/^\s+$/)) {
-                // 空白文字はそのまま追加
-                overlayHTML += token;
-            } else if (token.trim()) {
-                // 実際の単語の場合
-                const highlightClass = getWordHighlightClass(token, wordIndex, index, analysis);
-                if (highlightClass) {
-                    overlayHTML += `<span class="${highlightClass}">${escapeHtml(token)}</span>`;
-                } else {
-                    overlayHTML += escapeHtml(token);
-                }
-                wordIndex++;
-            } else {
-                overlayHTML += escapeHtml(token);
-            }
-        });
-        
-        overlay.innerHTML = overlayHTML;
-        syncOverlayScroll(panelId);
-    });
-}
-function getWordHighlightClass(word, wordIndex, manuscriptIndex, analysis) {
-    // この単語が異読に含まれているかチェック
-    for (const item of analysis) {
-        if (item.word === word) {
-            // 単語レベルの異読
-            for (const variant of item.variants) {
-                if (variant.manuscripts.includes(manuscriptIndex)) {
-                    if (variant.manuscripts.length === 1) {
-                        return 'unique-highlight';
-                    } else if (variant.manuscripts.length < manuscriptPanels.length) {
-                        return 'common-highlight';
-                    } else {
-                        return 'variant-highlight';
-                    }
-                }
-            }
-        } else if (item.phrase) {
-            // フレーズレベルの異読
-            const phraseWords = item.phrase.split(/\s+/);
-            if (phraseWords.includes(word)) {
-                for (const variant of item.variants) {
-                    if (variant.manuscripts.includes(manuscriptIndex)) {
-                        if (variant.manuscripts.length === 1) {
-                            return 'unique-highlight';
-                        } else if (variant.manuscripts.length < manuscriptPanels.length) {
-                            return 'common-highlight';
-                        } else {
-                            return 'variant-highlight';
-                        }
-                    }
-                }
-            }
+            resultsContent.textContent = resultText;
         }
-    }
-    return null;
-}
+
         function exportResults() {
             const content = document.getElementById('resultsContent').textContent;
             const blob = new Blob([content], { type: 'text/plain; charset=utf-8' });
