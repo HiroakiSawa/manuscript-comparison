@@ -373,7 +373,8 @@ body {
 
 .results-content {
     flex: 1;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: 8px;
     font-size: 11px;
     line-height: 16px;
@@ -381,6 +382,26 @@ body {
     direction: rtl;
     text-align: right;
     font-family: 'Noto Sans Arabic', 'Amiri', 'Arial Unicode MS', 'Tahoma', sans-serif;
+    scrollbar-width: thing;
+    scrollbar-color: #0e639c #2d2d30;
+}
+
+.results-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.results-content::-webkit-scrollbar-track {
+    background: #2d2d30;
+    border-radius: 4px;
+}
+
+.results-content::-webkit-scrollbar-thumb {
+    background: #0e639c;
+    border-radius: 4px;
+}
+
+.results-content::-webkit-scrollbar-thumb:hover {
+    background: #1177bb;
 }
 
 .variant-line {
