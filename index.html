@@ -563,75 +563,269 @@ function updateGridLayoutDynamic() {
         }
 
         function analyzeManuscripts(manuscripts) {
-            const maxLines = Math.max(...manuscripts.map(m => m.length));
-            const results = [];
-            
-            for (let lineNum = 0; lineNum < maxLines; lineNum++) {
-                const lineVariants = [];
-                const variants = new Set();
-                
-                for (let i = 0; i < manuscriptPanels.length; i++) {
-                    const line = manuscripts[i][lineNum] || '';
-                    lineVariants.push(line);
-                    if (line.trim()) variants.add(line.trim());
-                }
-                
-                if (variants.size > 1) {
-                    results.push({
-                        lineNumber: lineNum + 1,
-                        variants: lineVariants,
-                        variantCount: variants.size,
-                        hasVariants: true
-                    });
-                }
-            }
-            
-            return results;
-        }
-
-        function displayResults(analysis) {
-            const resultsContent = document.getElementById('resultsContent');
-            
-            if (analysis.length === 0) {
-                resultsContent.textContent = '異読箇所は見つかりませんでした\n\n全ての写本が一致しています。';
-                return;
-            }
-            
-            let resultText = `📊 解析サマリー\n異読箇所: ${analysis.length}箇所\n\n`;
-            
-            analysis.forEach((item, index) => {
-                resultText += `━━━━━━━━━━━━━━━━\n`;
-                resultText += `🔍 行 ${item.lineNumber} (異読${item.variantCount}種)\n\n`;
-                
-                const manuscriptLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
-                const variants = new Map();
-                
-                // 同じ異読をグループ化
-                for (let i = 0; i < manuscriptPanels.length; i++) {
-                    const text = item.variants[i] || '[空行]';
-                    if (!variants.has(text)) {
-                        variants.set(text, []);
+    // 全ての写本のテキストを結合して単語リストを作成
+    const allWords = new Set();
+    const manuscriptWords = manuscripts.map(ms => {
+        const fullText = ms.join(' ').trim();
+        const words = fullText ? fullText.split(/\s+/) : [];
+        words.forEach(word => allWords.add(word));
+        return words;
+    });
+    
+    const results = [];
+    const processedPositions = new Set();
+    
+    // 各単語について異読を確認
+    Array.from(allWords).forEach(word => {
+        if (!word.trim()) return;
+        
+        const wordVariants = new Map();
+        const wordPositions = [];
+        
+        // 各写本でこの単語の位置と前後の文脈を確認
+        manuscriptWords.forEach((words, msIndex) => {
+            words.forEach((w, wordIndex) => {
+                if (w === word) {
+                    // 前後2単語の文脈を含める
+                    const contextStart = Math.max(0, wordIndex - 2);
+                    const contextEnd = Math.min(words.length, wordIndex + 3);
+                    const context = words.slice(contextStart, contextEnd).join(' ');
+                    
+                    const position = `${msIndex}-${wordIndex}`;
+                    if (!processedPositions.has(position)) {
+                        wordPositions.push({
+                            manuscript: msIndex,
+                            wordIndex: wordIndex,
+                            context: context,
+                            position: position
+                        });
                     }
-                    const panelId = manuscriptPanels[i];
-                    const panelTitle = document.getElementById(`panel${panelId}`)?.querySelector('.panel-title')?.value || `写本${i + 1}`;
-                    variants.get(text).push(panelTitle);
                 }
-                
-                let variantNum = 1;
-                variants.forEach((manuscripts, text) => {
-                    if (text.trim() && text !== '[空行]') {
-                        resultText += `📝 異読${variantNum}: ${manuscripts.join('・')}\n`;
-                        resultText += `   ${text}\n\n`;
-                        variantNum++;
-                    } else if (text === '[空行]') {
-                        resultText += `⭕ 空行: ${manuscripts.join('・')}\n\n`;
-                    }
-                });
+            });
+        });
+        
+        // 文脈が異なる場合のみ異読として記録
+        if (wordPositions.length > 1) {
+            const contextGroups = new Map();
+            wordPositions.forEach(pos => {
+                if (!contextGroups.has(pos.context)) {
+                    contextGroups.set(pos.context, []);
+                }
+                contextGroups.get(pos.context).push(pos.manuscript);
+                processedPositions.add(pos.position);
             });
             
-            resultsContent.textContent = resultText;
+            if (contextGroups.size > 1) {
+                results.push({
+                    word: word,
+                    variants: Array.from(contextGroups.entries()).map(([context, manuscripts]) => ({
+                        context: context,
+                        manuscripts: manuscripts
+                    })),
+                    variantCount: contextGroups.size,
+                    hasVariants: true
+                });
+            }
         }
+    });
+    
+    // 完全に異なるフレーズも検出
+    const phraseResults = analyzePhrases(manuscripts);
+    results.push(...phraseResults);
+    
+    return results.sort((a, b) => {
+        // 単語の出現順でソート
+        const aFirstPos = getFirstWordPosition(a.word || a.phrase, manuscriptWords);
+        const bFirstPos = getFirstWordPosition(b.word || b.phrase, manuscriptWords);
+        return aFirstPos - bFirstPos;
+    });
+}
 
+function analyzeManuscripts(manuscripts) {
+    // 全ての写本のテキストを結合して単語リストを作成
+    const allWords = new Set();
+    const manuscriptWords = manuscripts.map(ms => {
+        const fullText = ms.join(' ').trim();
+        const words = fullText ? fullText.split(/\s+/) : [];
+        words.forEach(word => allWords.add(word));
+        return words;
+    });
+    
+    const results = [];
+    const processedPositions = new Set();
+    
+    // 各単語について異読を確認
+    Array.from(allWords).forEach(word => {
+        if (!word.trim()) return;
+        
+        const wordVariants = new Map();
+        const wordPositions = [];
+        
+        // 各写本でこの単語の位置と前後の文脈を確認
+        manuscriptWords.forEach((words, msIndex) => {
+            words.forEach((w, wordIndex) => {
+                if (w === word) {
+                    // 前後2単語の文脈を含める
+                    const contextStart = Math.max(0, wordIndex - 2);
+                    const contextEnd = Math.min(words.length, wordIndex + 3);
+                    const context = words.slice(contextStart, contextEnd).join(' ');
+                    
+                    const position = `${msIndex}-${wordIndex}`;
+                    if (!processedPositions.has(position)) {
+                        wordPositions.push({
+                            manuscript: msIndex,
+                            wordIndex: wordIndex,
+                            context: context,
+                            position: position
+                        });
+                    }
+                }
+            });
+        });
+        
+        // 文脈が異なる場合のみ異読として記録
+        if (wordPositions.length > 1) {
+            const contextGroups = new Map();
+            wordPositions.forEach(pos => {
+                if (!contextGroups.has(pos.context)) {
+                    contextGroups.set(pos.context, []);
+                }
+                contextGroups.get(pos.context).push(pos.manuscript);
+                processedPositions.add(pos.position);
+            });
+            
+            if (contextGroups.size > 1) {
+                results.push({
+                    word: word,
+                    variants: Array.from(contextGroups.entries()).map(([context, manuscripts]) => ({
+                        context: context,
+                        manuscripts: manuscripts
+                    })),
+                    variantCount: contextGroups.size,
+                    hasVariants: true
+                });
+            }
+        }
+    });
+    
+    // 完全に異なるフレーズも検出
+    const phraseResults = analyzePhrases(manuscripts);
+    results.push(...phraseResults);
+    
+    return results.sort((a, b) => {
+        // 単語の出現順でソート
+        const aFirstPos = getFirstWordPosition(a.word || a.phrase, manuscriptWords);
+        const bFirstPos = getFirstWordPosition(b.word || b.phrase, manuscriptWords);
+        return aFirstPos - bFirstPos;
+    });
+}
+        
+function displayResults(analysis) {
+    const resultsContent = document.getElementById('resultsContent');
+    
+    if (analysis.length === 0) {
+        resultsContent.textContent = '異読箇所は見つかりませんでした\n\n全ての写本が一致しています。';
+        return;
+    }
+    
+    let resultText = `📊 テキスト解析サマリー\n異読箇所: ${analysis.length}箇所\n\n`;
+    
+    analysis.forEach((item, index) => {
+        resultText += `━━━━━━━━━━━━━━━━\n`;
+        
+        if (item.word) {
+            resultText += `🔍 単語異読: "${item.word}" (${item.variantCount}種)\n\n`;
+        } else if (item.phrase) {
+            resultText += `🔍 句異読: "${item.phrase}" (${item.variantCount}種)\n\n`;
+        }
+        
+        let variantNum = 1;
+        item.variants.forEach(variant => {
+            const manuscriptLabels = variant.manuscripts.map(msIndex => {
+                const panelId = manuscriptPanels[msIndex];
+                return document.getElementById(`panel${panelId}`)?.querySelector('.panel-title')?.value || `写本${msIndex + 1}`;
+            });
+            
+            resultText += `📝 異読${variantNum}: ${manuscriptLabels.join('・')}\n`;
+            resultText += `   「${variant.context}」\n\n`;
+            variantNum++;
+        });
+    });
+    
+    resultsContent.textContent = resultText;
+}
+function updateTextOverlays(analysis) {
+    // 各写本パネルのオーバーレイを更新
+    manuscriptPanels.forEach((panelId, index) => {
+        const textarea = document.getElementById(`text${panelId}`);
+        const overlay = document.getElementById(`textOverlay${panelId}`);
+        
+        if (!textarea || !overlay) return;
+        
+        const fullText = textarea.value;
+        const words = fullText.split(/(\s+)/); // 空白も保持して分割
+        let overlayHTML = '';
+        
+        // 各単語について異読チェック
+        let wordIndex = 0;
+        words.forEach((token, tokenIndex) => {
+            if (token.match(/^\s+$/)) {
+                // 空白文字はそのまま追加
+                overlayHTML += token;
+            } else if (token.trim()) {
+                // 実際の単語の場合
+                const highlightClass = getWordHighlightClass(token, wordIndex, index, analysis);
+                if (highlightClass) {
+                    overlayHTML += `<span class="${highlightClass}">${escapeHtml(token)}</span>`;
+                } else {
+                    overlayHTML += escapeHtml(token);
+                }
+                wordIndex++;
+            } else {
+                overlayHTML += escapeHtml(token);
+            }
+        });
+        
+        overlay.innerHTML = overlayHTML;
+        syncOverlayScroll(panelId);
+    });
+}
+function getWordHighlightClass(word, wordIndex, manuscriptIndex, analysis) {
+    // この単語が異読に含まれているかチェック
+    for (const item of analysis) {
+        if (item.word === word) {
+            // 単語レベルの異読
+            for (const variant of item.variants) {
+                if (variant.manuscripts.includes(manuscriptIndex)) {
+                    if (variant.manuscripts.length === 1) {
+                        return 'unique-highlight';
+                    } else if (variant.manuscripts.length < manuscriptPanels.length) {
+                        return 'common-highlight';
+                    } else {
+                        return 'variant-highlight';
+                    }
+                }
+            }
+        } else if (item.phrase) {
+            // フレーズレベルの異読
+            const phraseWords = item.phrase.split(/\s+/);
+            if (phraseWords.includes(word)) {
+                for (const variant of item.variants) {
+                    if (variant.manuscripts.includes(manuscriptIndex)) {
+                        if (variant.manuscripts.length === 1) {
+                            return 'unique-highlight';
+                        } else if (variant.manuscripts.length < manuscriptPanels.length) {
+                            return 'common-highlight';
+                        } else {
+                            return 'variant-highlight';
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return null;
+}
         function exportResults() {
             const content = document.getElementById('resultsContent').textContent;
             const blob = new Blob([content], { type: 'text/plain; charset=utf-8' });
