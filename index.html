@@ -193,47 +193,63 @@
             select.value = closestOption;
         }
 
-        function updateGridLayoutDynamic() {
-            const container = document.getElementById('manuscriptContainer');
-            const count = manuscriptPanels.length;
-            
-            if (count === 2) {
-                // 2写本: 横並び、1行で最大化
-                container.style.gridTemplateColumns = '1fr 1fr 400px';
-                container.style.gridTemplateRows = '1fr';
-            } else if (count === 3) {
-                // 3写本: 横並び、1行で最大化
-                container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
-                container.style.gridTemplateRows = '1fr';
-            } else if (count === 4) {
-                // 4写本: 2×2配置
-                container.style.gridTemplateColumns = '1fr 1fr 400px';
-                container.style.gridTemplateRows = '1fr 1fr';
-            } else if (count === 5) {
-                // 5写本: 3+2配置
-                container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
-                container.style.gridTemplateRows = '1fr 1fr';
-            } else if (count === 6) {
-                // 6写本: 3×2配置
-                container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
-                container.style.gridTemplateRows = '1fr 1fr';
-            } else if (count <= 8) {
-                // 7-8写本: 4×2配置
-                container.style.gridTemplateColumns = '1fr 1fr 1fr 1fr 400px';
-                container.style.gridTemplateRows = '1fr 1fr';
-            } else if (count === 9) {
-                // 9写本: 3×3配置
-                container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
-                container.style.gridTemplateRows = '1fr 1fr 1fr';
-            } else {
-                // 10-12写本: 4×3配置
-                container.style.gridTemplateColumns = '1fr 1fr 1fr 1fr 400px';
-                container.style.gridTemplateRows = '1fr 1fr 1fr';
-            }
-            
-            // 追加ボタンの表示/非表示
-            updateAddButton();
+function updateGridLayoutDynamic() {
+    const container = document.getElementById('manuscriptContainer');
+    const count = manuscriptPanels.length;
+    
+    // 解析結果パネルは常に固定位置に配置
+    const resultsPanel = container.querySelector('.results-panel');
+    if (resultsPanel) {
+        resultsPanel.style.gridColumn = '-2';
+        resultsPanel.style.gridRow = '1 / -1';
+    }
+    
+    if (count === 2) {
+        // 2写本: 横並び、1行で最大化
+        container.style.gridTemplateColumns = '1fr 1fr 400px';
+        container.style.gridTemplateRows = '1fr';
+    } else if (count === 3) {
+        // 3写本: 横並び、1行で最大化
+        container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
+        container.style.gridTemplateRows = '1fr';
+    } else if (count === 4) {
+        // 4写本: 2×2配置
+        container.style.gridTemplateColumns = '1fr 1fr 400px';
+        container.style.gridTemplateRows = '1fr 1fr';
+    } else if (count === 5) {
+        // 5写本: 3+2配置
+        container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
+        container.style.gridTemplateRows = '1fr 1fr';
+    } else if (count === 6) {
+        // 6写本: 3×2配置
+        container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
+        container.style.gridTemplateRows = '1fr 1fr';
+    } else if (count <= 8) {
+        // 7-8写本: 4×2配置
+        container.style.gridTemplateColumns = '1fr 1fr 1fr 1fr 400px';
+        container.style.gridTemplateRows = '1fr 1fr';
+    } else if (count === 9) {
+        // 9写本: 3×3配置
+        container.style.gridTemplateColumns = '1fr 1fr 1fr 400px';
+        container.style.gridTemplateRows = '1fr 1fr 1fr';
+    } else {
+        // 10-12写本: 4×3配置
+        container.style.gridTemplateColumns = '1fr 1fr 1fr 1fr 400px';
+        container.style.gridTemplateRows = '1fr 1fr 1fr';
+    }
+    
+    // 追加ボタンの表示/非表示
+    updateAddButton();
+    
+    // 解析結果パネルの高さを確実に設定
+    setTimeout(() => {
+        const resultsPanel = document.getElementById('manuscriptContainer').querySelector('.results-panel');
+        if (resultsPanel) {
+            resultsPanel.style.height = 'auto';
+            resultsPanel.style.minHeight = '100%';
         }
+    }, 0);
+}
 
         function updateAddButton() {
             const container = document.getElementById('manuscriptContainer');
