@@ -1,0 +1,524 @@
+/* 写本異読確認ツール - CSS */
+/* リセット */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* メインスタイル */
+body {
+    font-family: 'Noto Sans Arabic', 'Amiri', 'Arial Unicode MS', 'Tahoma', 'Segoe UI', sans-serif;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    height: 100vh;
+    overflow: hidden;
+    -webkit-font-feature-settings: "liga" 1, "kern" 1;
+    font-feature-settings: "liga" 1, "kern" 1;
+    text-rendering: optimizeLegibility;
+}
+
+/* ヘッダー */
+.header {
+    background: #2d2d30;
+    padding: 8px 16px;
+    border-bottom: 1px solid #3e3e42;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.header h1 {
+    font-size: 14px;
+    font-weight: normal;
+    margin-right: auto;
+}
+
+.load-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.load-btn {
+    padding: 4px 12px;
+    background: #0e639c;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.load-btn:hover {
+    background: #1177bb;
+}
+
+.manuscript-selector {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.manuscript-count-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #d4d4d4;
+}
+
+.count-select {
+    padding: 2px 6px;
+    background: #2d2d30;
+    color: #d4d4d4;
+    border: 1px solid #3e3e42;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+.manuscript-count {
+    font-size: 11px;
+    color: #858585;
+}
+
+/* コンテナ */
+.container {
+    display: grid;
+    height: calc(100vh - 50px);
+    gap: 1px;
+    background: #3e3e42;
+    /* グリッド設定は JavaScript で動的に変更される */
+}
+
+.results-panel {
+    grid-column: -2;
+    grid-row: 1 / -1;
+    background: #252526;
+    border-left: 2px solid #3e3e42;
+    display: flex;
+    flex-direction: column;
+}
+
+/* パネル */
+.panel {
+    background: #1e1e1e;
+    border: 1px solid #3e3e42;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.panel-header {
+    background: #252526;
+    padding: 6px 12px;
+    border-bottom: 1px solid #3e3e42;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel-title {
+    flex: 1;
+    background: linear-gradient(135deg, rgba(14, 99, 156, 0.1), rgba(14, 99, 156, 0.05));
+    border: 1px solid rgba(14, 99, 156, 0.3);
+    color: #e6f3ff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 8px;
+    min-width: 80px;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.5px;
+}
+
+.panel-title:focus {
+    background: linear-gradient(135deg, rgba(14, 99, 156, 0.2), rgba(14, 99, 156, 0.1));
+    border-color: #0e639c;
+    outline: none;
+    box-shadow: 
+        inset 0 1px 2px rgba(0, 0, 0, 0.1),
+        0 0 0 3px rgba(14, 99, 156, 0.2),
+        0 2px 8px rgba(14, 99, 156, 0.3);
+    transform: translateY(-1px);
+    color: #ffffff;
+}
+
+.panel-title:hover {
+    background: linear-gradient(135deg, rgba(14, 99, 156, 0.15), rgba(14, 99, 156, 0.08));
+    border-color: rgba(14, 99, 156, 0.5);
+    transform: translateY(-0.5px);
+    box-shadow: 
+        inset 0 1px 2px rgba(0, 0, 0, 0.1),
+        0 1px 4px rgba(14, 99, 156, 0.2);
+    color: #ffffff;
+}
+
+.panel-title::placeholder {
+    color: rgba(230, 243, 255, 0.6);
+    font-style: italic;
+}
+
+.panel-controls {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.panel-btn {
+    padding: 2px 6px;
+    background: #0e639c;
+    color: white;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.panel-btn:hover {
+    background: #1177bb;
+}
+
+.panel-btn.danger {
+    background: #d73a49;
+}
+
+.panel-btn.danger:hover {
+    background: #e85662;
+}
+
+/* コンテンツエリア */
+.content {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+}
+
+.text-overlay {
+    position: absolute;
+    left: 30px;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    font-family: 'Noto Sans Arabic', 'Amiri', 'Arial Unicode MS', 'Tahoma', sans-serif;
+    font-size: 12px;
+    line-height: 20px;
+    padding: 4px;
+    direction: rtl;
+    text-align: right;
+    unicode-bidi: embed;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    overflow: hidden;
+}
+
+.text-overlay .line {
+    display: block;
+}
+
+.text-overlay .variant-highlight {
+    background-color: rgba(255, 191, 0, 0.3);
+    border-radius: 2px;
+    padding: 0 2px;
+}
+
+.text-overlay .unique-highlight {
+    background-color: rgba(248, 81, 73, 0.3);
+    border-radius: 2px;
+    padding: 0 2px;
+}
+
+.text-overlay .common-highlight {
+    background-color: rgba(46, 160, 67, 0.3);
+    border-radius: 2px;
+    padding: 0 2px;
+}
+
+.line-numbers {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 30px;
+    background: #1e1e1e;
+    border-right: 1px solid #3e3e42;
+    font-size: 10px;
+    line-height: 20px;
+    padding: 4px 2px;
+    color: #858585;
+    user-select: none;
+    direction: ltr;
+    text-align: right;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.textarea-input {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    color: #d4d4d4;
+    font-family: 'Noto Sans Arabic', 'Amiri', 'Arial Unicode MS', 'Tahoma', sans-serif;
+    font-size: 12px;
+    line-height: 20px;
+    padding: 4px;
+    margin-left: 30px;
+    resize: none;
+    outline: none;
+    direction: rtl;
+    text-align: right;
+    unicode-bidi: embed;
+    word-wrap: break-word;
+    -webkit-font-feature-settings: "liga" 1, "kern" 1, "calt" 1;
+    font-feature-settings: "liga" 1, "kern" 1, "calt" 1;
+    text-rendering: optimizeLegibility;
+    /* スクロールバーの初期位置を右端に */
+    scroll-behavior: smooth;
+}
+
+.status {
+    font-size: 9px;
+    color: #858585;
+}
+
+/* 解析結果パネル */
+.results-header {
+    background: #252526;
+    padding: 6px 8px;
+    border-bottom: 1px solid #3e3e42;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.results-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.results-title {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.results-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.results-btn {
+    padding: 4px 8px;
+    background: #0e639c;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.results-btn:hover {
+    background: #1177bb;
+}
+
+.legend {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 9px;
+    color: #d4d4d4;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.legend-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+.legend-color.variant {
+    background-color: rgba(255, 191, 0, 0.4);
+    border: 1px solid #ffbf00;
+}
+
+.legend-color.unique {
+    background-color: rgba(248, 81, 73, 0.4);
+    border: 1px solid #f85149;
+}
+
+.legend-color.common {
+    background-color: rgba(46, 160, 67, 0.4);
+    border: 1px solid #4ec9b0;
+}
+
+.legend-color.same {
+    background-color: transparent;
+    border: 1px solid #858585;
+}
+
+.results-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px;
+    font-size: 11px;
+    line-height: 16px;
+    white-space: pre-wrap;
+    direction: rtl;
+    text-align: right;
+    font-family: 'Noto Sans Arabic', 'Amiri', 'Arial Unicode MS', 'Tahoma', sans-serif;
+    scrollbar-width: thing;
+    scrollbar-color: #0e639c #2d2d30;
+}
+
+.results-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.results-content::-webkit-scrollbar-track {
+    background: #2d2d30;
+    border-radius: 4px;
+}
+
+.results-content::-webkit-scrollbar-thumb {
+    background: #0e639c;
+    border-radius: 4px;
+}
+
+.results-content::-webkit-scrollbar-thumb:hover {
+    background: #1177bb;
+}
+
+.variant-line {
+    margin-bottom: 8px;
+    padding: 4px;
+    border-radius: 3px;
+}
+
+.variant-line.highlight {
+    background: rgba(255, 191, 0, 0.1);
+    border-left: 3px solid #ffbf00;
+}
+
+.manuscript-label {
+    font-weight: bold;
+    color: #4ec9b0;
+    font-size: 10px;
+}
+
+.variant-text {
+    color: #ffbf00;
+    background: rgba(255, 191, 0, 0.1);
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+/* ダイアログスタイル */
+.dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.dialog {
+    background: #2d2d30;
+    border: 1px solid #3e3e42;
+    border-radius: 6px;
+    padding: 20px;
+    width: 600px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow: auto;
+}
+
+.dialog h3 {
+    margin: 0 0 15px 0;
+    color: #d4d4d4;
+    font-size: 16px;
+}
+
+.dialog-input {
+    width: 100%;
+    height: 200px;
+    background: #1e1e1e;
+    border: 1px solid #3e3e42;
+    color: #d4d4d4;
+    font-family: 'Noto Sans Arabic', 'Amiri', 'Arial Unicode MS', 'Tahoma', sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    padding: 10px;
+    resize: vertical;
+    direction: rtl;
+    text-align: right;
+    unicode-bidi: embed;
+}
+
+.dialog-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 15px;
+}
+
+.dialog-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.dialog-btn.primary {
+    background: #0e639c;
+    color: white;
+}
+
+.dialog-btn.primary:hover {
+    background: #1177bb;
+}
+
+.dialog-btn.secondary {
+    background: #3e3e42;
+    color: #d4d4d4;
+}
+
+.dialog-btn.secondary:hover {
+    background: #4e4e52;
+}
+
+.target-selector {
+    margin: 10px 0;
+}
+
+.target-selector label {
+    display: inline-block;
+    margin-right: 15px;
+    color: #d4d4d4;
+    font-size: 14px;
+}
+
+.target-selector input[type="radio"] {
+    margin-right: 5px;
+}
